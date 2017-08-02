@@ -28,7 +28,7 @@
     </section>
     <section class="stripe">
         <div class="container field">
-            <input type="text" class="input field-left" value="@spotify, #spotify" id="query">
+            <input type="text" class="input field-left" value="#debconf17" id="query">
             <button class='button field-right' id="button-update"><i class="fa fa-refresh"></i>
             </button>
         </div>
@@ -70,37 +70,10 @@
             initialQuery = initialQuery.replace(" ", "");
             var queryTags = initialQuery.split(",");
             $('.social-feed-container').socialfeed({
-                // FACEBOOK
-                facebook: {
+                // MASTODON
+                mastodon: {
                     accounts: queryTags,
                     limit: 2,
-                    access_token: '150849908413827|a20e87978f1ac491a0c4a721c961b68c'
-                },
-                // GOOGLEPLUS
-                google: {
-                    accounts: queryTags,
-                    limit: 2,
-                    access_token: 'AIzaSyDAelFmJhg6BSUbSLe8UT7s-G53tL4_KRg'
-                },
-                // Twitter
-                twitter: {
-                    accounts: queryTags,
-                    limit: 2,
-                    consumer_key: 'qzRXgkI7enflNJH1lWFvujT2P', // make sure to have your app read-only
-                    consumer_secret: '8e7E7gHuTwyDHw9lGQFO73FcUwz9YozT37lEvZulMq8FXaPl8O', // make sure to have your app read-only
-                },
-                // VKONTAKTE
-                vk: {
-                    accounts: queryTags,
-                    limit: 2,
-                    source: 'all'
-                },
-                // INSTAGRAM
-                instagram: {
-                    accounts: queryTags,
-                    limit: 2,
-                    client_id: '88b4730e0e2c4b2f8a09a6184af2e218',
-                    access_token: ''
                 },
 
                 // GENERAL SETTINGS

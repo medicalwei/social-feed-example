@@ -16,13 +16,14 @@ if (typeof Object.create !== 'function') {
             show_media: false, // show images of attachments if available
             media_min_width: 300,
             length: 500, // maximum length of post message shown
-            date_format: 'll'
+            date_format: 'll',
+            date_locale: 'en'
         };
         //---------------------------------------------------------------------------------
         var options = $.extend(defaults, _options),
             container = $(this),
             template,
-            social_networks = ['facebook', 'instagram', 'vk', 'google', 'blogspot', 'twitter', 'pinterest', 'rss'],
+            social_networks = ['facebook', 'instagram', 'vk', 'google', 'blogspot', 'twitter', 'pinterest', 'mastodon', 'diaspora', 'rss'],
             posts_to_load_count = 0,
             loaded_post_count = 0;
         // container.empty().css('display', 'block');
@@ -35,6 +36,8 @@ if (typeof Object.create !== 'function') {
                 if (options[network]) {
                     if (options[network].accounts) {
                         posts_to_load_count += options[network].limit * options[network].accounts.length;
+                    } else if (options[network].urls ){
+                        posts_to_load_count += options[network].limit * options[network].urls.length;
                     } else {
                         posts_to_load_count += options[network].limit;
                     }
@@ -101,8 +104,8 @@ if (typeof Object.create !== 'function') {
             this.content = data;
             this.content.social_network = social_network;
             this.content.attachment = (this.content.attachment === undefined) ? '' : this.content.attachment;
-            this.content.time_ago = data.dt_create.fromNow();
-            this.content.date = data.dt_create.format(options.date_format);
+            this.content.time_ago = data.dt_create.locale(options.date_locale).fromNow();
+            this.content.date = data.dt_create.locale(options.date_locale).format(options.date_format);
             this.content.dt_create = this.content.dt_create.valueOf();
             this.content.text = Utility.wrapLinks(Utility.shorten(data.message + ' ' + data.description), data.social_network);
             this.content.moderation_passed = (options.moderation) ? options.moderation(this.content) : true;
@@ -265,11 +268,11 @@ if (typeof Object.create !== 'function') {
                     unifyPostData: function(element) {
                         var post = {};
                         if (element.id) {
-                            post.id = element.id;
+                            post.id = element.id_str;
                             //prevent a moment.js console warning due to Twitter's poor date format.
-                            post.dt_create = moment(new Date(element.created_at));
+                            post.dt_create = moment(element.created_at, 'dd MMM DD HH:mm:ss ZZ YYYY');
                             post.author_link = 'http://twitter.com/' + element.user.screen_name;
-                            post.author_picture = element.user.profile_image_url;
+                            post.author_picture = element.user.profile_image_url_https;
                             post.post_url = post.author_link + '/status/' + element.id_str;
                             post.author_name = element.user.name;
                             post.message = element.text;
@@ -278,7 +281,7 @@ if (typeof Object.create !== 'function') {
 
                             if (options.show_media === true) {
                                 if (element.entities.media && element.entities.media.length > 0) {
-                                    var image_url = element.entities.media[0].media_url;
+                                    var image_url = element.entities.media[0].media_url_https;
                                     if (image_url) {
                                         post.attachment = '<img class="attachment" src="' + image_url + '" />';
                                     }
@@ -713,40 +716,174 @@ if (typeof Object.create !== 'function') {
                     }
                 }
             },
+            mastodon: {
+                posts: [],
+                loaded: false,
+                api: 'https://pawoo.net/api/v1/',
+
+                getData: function(account) {
+                    var request_url;
+                    var api_url = Feed.mastodon.api;
+
+                    if (options.mastodon.server) {
+                      api_url = options.mastodon.server + '/api/v1/';
+                    }
+
+                    switch (account[0]) {
+                        case '#':
+                            var hashtag = account.substr(1);
+                            request_url = api_url + 'timelines/tag/' + hashtag;
+                            Utility.get_request(request_url, Feed.mastodon.utility.getPosts);
+                            break;
+                        default:
+                    }
+                },
+                utility: {
+                    getPosts: function(json) {
+                        if (json) {
+                            $.each(json, function() {
+                                var element = this;
+                                var post = new SocialFeedPost('mastodon', Feed.mastodon.utility.unifyPostData(element));
+                                post.render();
+                            });
+                        }
+                    },
+                    unifyPostData: function(element) {
+                        var post = {};
+                        if (element.id) {
+                            post.id = element.id;
+                            //prevent a moment.js console warning due to Twitter's poor date format.
+                            post.dt_create = moment(element.created_at);
+                            post.author_link = element.account.url;
+                            post.author_picture = element.account.avatar;
+                            post.author_name = element.account.display_name;
+                            post.message = Utility.stripHTML(element.content);
+                            post.description = '';
+                            post.link = element.url;
+
+                            if (options.show_media === true) {
+                                if (element.media_attachments && element.media_attachments.length > 0) {
+                                    var image_url = element.media_attachments[0].url;
+                                    if (image_url) {
+                                        post.attachment = '<img class="attachment" src="' + image_url + '" />';
+                                    }
+                                }
+                            }
+                        }
+                        return post;
+                    }
+                }
+            },
+            diaspora: {
+                posts: [],
+                loaded: false,
+                api: 'https://joindiaspora.com/',
+
+                getData: function(account) {
+                    var request_url;
+                    var api_url = Feed.diaspora.api;
+
+                    if (options.diaspora.server) {
+                      api_url = options.diaspora.server + '/';
+                    }
+
+                    switch (account[0]) {
+                        case '#':
+                            var hashtag = account.substr(1);
+                            request_url = api_url + 'tags/' + hashtag + '.json';
+                            Utility.get_request(request_url, Feed.diaspora.utility.getPosts);
+                            break;
+                        default:
+                    }
+                },
+                utility: {
+                    getPosts: function(json) {
+                        if (json) {
+                            $.each(json, function() {
+                                var element = this;
+                                var post = new SocialFeedPost('diaspora', Feed.diaspora.utility.unifyPostData(element));
+                                post.render();
+                            });
+                        }
+                    },
+                    unifyPostData: function(element) {
+                        var post = {};
+                        if (element.id) {
+                            post.id = element.id;
+                            //prevent a moment.js console warning due to Twitter's poor date format.
+                            post.dt_create = moment(element.created_at);
+                            post.author_link = api_url + "people/" + element.author.guid;
+                            post.author_picture = element.author.avatar.large;
+                            post.author_name = element.author.name;
+                            post.message = element.title;
+                            post.description = element.text;
+                            post.link = api_url + "posts/" + element.guid;
+
+                            if (options.show_media === true) {
+                                if (element.photos && element.photos.length > 0) {
+                                    var image_url = element.photos[0].sizes.large;
+                                    if (image_url) {
+                                        post.attachment = '<img class="attachment" src="' + image_url + '" />';
+                                    }
+                                }
+                            }
+                        }
+                        return post;
+                    }
+                }
+            },
             rss : {
                 posts: [],
                 loaded: false,
-                api : 'https://ajax.googleapis.com/ajax/services/feed/load?v=1.0',
+                api : 'https://query.yahooapis.com/v1/public/yql?q=',
+                datatype: 'json',
 
                 getData: function(url) {
-                    var limit = '&num='+ options.rss.limit,
-                      request_url = Feed.rss.api + limit + '&q=' + encodeURIComponent(url);
+                    var limit = options.rss.limit,
+                      yql = encodeURIComponent('select entry FROM feednormalizer where url=\'' + url + '\' AND output=\'atom_1.0\' | truncate(count=' + limit + ')' ),
+                      request_url = Feed.rss.api + yql + '&format=json&callback=?';
 
-                    Utility.request(request_url, Feed.rss.utility.getPosts);
+                    Utility.request(request_url, Feed.rss.utility.getPosts, Feed.rss.datatype);
                 },
                 utility: {
 
                     getPosts: function(json) {
-                        $.each(json.responseData.feed.entries, function(index, element) {
-                            var post = new SocialFeedPost('rss', Feed.rss.utility.unifyPostData(index, element));
-                            post.render();
-                        });
+                        console.log(json);
+                        if (json.query.count > 0 ){
+                            $.each(json.query.results.feed, function(index, element) {
+                                var post = new SocialFeedPost('rss', Feed.rss.utility.unifyPostData(index, element));
+                                post.render();
+                            });
+                        }
                     },
 
                     unifyPostData: function(index, element){
+
+                        var item = element;
+
+                        if ( element.entry !== undefined ){
+                            item = element.entry;
+                        }
                         var post = {};
 
-                        post.id = index;
-                        post.dt_create= moment(element.publishedDate, 'ddd, DD MMM YYYY HH:mm:ss ZZ', 'en');
+                        post.id = '"' + item.id + '"';
+                        post.dt_create= moment(item.published, 'YYYY-MM-DDTHH:mm:ssZ', 'en');
+
                         post.author_link = '';
                         post.author_picture = '';
-                        post.author_name = element.author;
-                        post.message = Utility.stripHTML(element.title);
-                        post.description = Utility.stripHTML(element.content);
+                        post.author_name = '';
+                        if( item.creator !== undefined ){
+                            post.author_name = item.creator;
+                        }
+                        post.message = item.title;
+                        post.description = '';
+                        if( item.summary !== undefined ){
+                            post.description = Utility.stripHTML(item.summary.content);
+                        }
                         post.social_network = 'rss';
-                        post.link = element.link;
-                        if (options.show_media && element.mediaGroups ) {
-                            post.attachment = '<img class="attachment" src="' + element.mediaGroups[0].contents[0].url + '" />';
+                        post.link = item.link.href;
+                        if (options.show_media && item.thumbnail !== undefined ) {
+                            post.attachment = '<img class="attachment" src="' + item.thumbnail.url + '" />';
                         }
                         return post;
                     }
