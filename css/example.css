@@ -102,3 +102,15 @@ section.intro hr, .intro hr, .intro.stripe hr {
 .social-feed-element.hidden{
   display:none;
 }
+
+@font-face {
+  font-family: 'FontAwesomeMastodon';
+  src: url('mastodon.otf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.fa-mastodon{
+  font-family: 'FontAwesomeMastodon';
+  content: '\e800';
+}
