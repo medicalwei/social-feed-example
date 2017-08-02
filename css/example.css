@@ -110,7 +110,9 @@ section.intro hr, .intro hr, .intro.stripe hr {
   font-style: normal;
 }
 
-.fa-mastodon{
+.fa.fa-mastodon{
   font-family: 'FontAwesomeMastodon';
+}
+.fa-mastodon:before{
   content: '\e800';
 }
