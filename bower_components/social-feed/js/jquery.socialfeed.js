@@ -23,7 +23,7 @@ if (typeof Object.create !== 'function') {
         var options = $.extend(defaults, _options),
             container = $(this),
             template,
-            social_networks = ['facebook', 'instagram', 'vk', 'google', 'blogspot', 'twitter', 'pinterest', 'mastodon', 'diaspora', 'rss'],
+            social_networks = ['facebook', 'instagram', 'vk', 'google', 'blogspot', 'twitter', 'pinterest', 'mastodon', 'rss'],
             posts_to_load_count = 0,
             loaded_post_count = 0;
         // container.empty().css('display', 'block');
@@ -756,7 +756,7 @@ if (typeof Object.create !== 'function') {
                             post.dt_create = moment(element.created_at);
                             post.author_link = element.account.url;
                             post.author_picture = element.account.avatar;
-                            post.author_name = element.account.display_name;
+                            post.author_name = element.account.display_name || element.account.username;
                             post.message = Utility.stripHTML(element.content);
                             post.description = '';
                             post.link = element.url;
@@ -764,64 +764,6 @@ if (typeof Object.create !== 'function') {
                             if (options.show_media === true) {
                                 if (element.media_attachments && element.media_attachments.length > 0) {
                                     var image_url = element.media_attachments[0].url;
-                                    if (image_url) {
-                                        post.attachment = '<img class="attachment" src="' + image_url + '" />';
-                                    }
-                                }
-                            }
-                        }
-                        return post;
-                    }
-                }
-            },
-            diaspora: {
-                posts: [],
-                loaded: false,
-                api: 'https://joindiaspora.com/',
-
-                getData: function(account) {
-                    var request_url;
-                    var api_url = Feed.diaspora.api;
-
-                    if (options.diaspora.server) {
-                      api_url = options.diaspora.server + '/';
-                    }
-
-                    switch (account[0]) {
-                        case '#':
-                            var hashtag = account.substr(1);
-                            request_url = api_url + 'tags/' + hashtag + '.json';
-                            Utility.get_request(request_url, Feed.diaspora.utility.getPosts);
-                            break;
-                        default:
-                    }
-                },
-                utility: {
-                    getPosts: function(json) {
-                        if (json) {
-                            $.each(json, function() {
-                                var element = this;
-                                var post = new SocialFeedPost('diaspora', Feed.diaspora.utility.unifyPostData(element));
-                                post.render();
-                            });
-                        }
-                    },
-                    unifyPostData: function(element) {
-                        var post = {};
-                        if (element.id) {
-                            post.id = element.id;
-                            //prevent a moment.js console warning due to Twitter's poor date format.
-                            post.dt_create = moment(element.created_at);
-                            post.author_link = api_url + "people/" + element.author.guid;
-                            post.author_picture = element.author.avatar.large;
-                            post.author_name = element.author.name;
-                            post.message = element.title;
-                            post.description = element.text;
-                            post.link = api_url + "posts/" + element.guid;
-
-                            if (options.show_media === true) {
-                                if (element.photos && element.photos.length > 0) {
-                                    var image_url = element.photos[0].sizes.large;
                                     if (image_url) {
                                         post.attachment = '<img class="attachment" src="' + image_url + '" />';
                                     }
